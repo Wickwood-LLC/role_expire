@@ -1,0 +1,56 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Role Expire install
+ */
+
+
+/**
+ * Implementation of hook_schema.
+ */
+function role_expire_schema() {
+  $roles = user_roles(true);
+  unset($roles[DRUPAL_AUTHENTICATED_RID]);
+      
+  foreach ($roles as $rid => $role) {
+    $schema['role_expire_'. $role] = array(
+      'description' => t('Expiry information for '. $role),
+      'fields' => array(
+        'uid' => array(
+          'type' => 'int',
+          'length' => 11,
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'description' => t('User ID connected with expiry date.')
+        ),
+        'expiry_timestamp' => array(
+          'description' => t('Role expiry timestamp.'),
+          'type' => 'varchar',
+          'not null' => TRUE,
+          'length' => 255)
+        ),
+      'indexes' => array(
+        'uid' => array('uid'),
+        )
+      );
+  }
+  
+  return $schema;
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function role_expire_install() {
+  drupal_install_schema('role_expire');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function role_expire_uninstall() {
+  drupal_uninstall_schema('role_expire');
+}
+

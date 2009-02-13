@@ -1,0 +1,311 @@
+<?php
+// $Id$ 
+
+/**
+ * @file
+ * Role Expire module
+ *
+ * Enables user roles to expire on given time and day.
+ */
+
+
+/**
+ * Implementation of hook_views_api().
+ */
+function role_expire_views_api() {
+  return array("api" => views_api_version());
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function role_expire_perm() {
+  return array("view all role expiry dates");
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function role_expire_form_alter(&$form, $form_state, $form_id) {
+  if ($form_id == "user_profile_form") {
+    $form['account']['roles']['#attributes'] = array('class' => 'role-expire-roles');
+  }
+}
+
+/**
+ * Implementation of hook_user().
+ */
+function role_expire_user($op, &$edit, &$account, $category = NULL) {
+  if ($op == 'form' && $category == 'account') {
+    drupal_add_js(drupal_get_path('module', 'role_expire').'/role_expire.js', 'module');
+    
+    if (user_access("administer permissions") && user_access("administer users")) {
+      $roles = user_roles(true);
+      unset($roles[DRUPAL_AUTHENTICATED_RID]);
+      
+      $i = 100;
+      foreach ($roles as $rid => $role) {
+        if ($account->role_expire[$rid]) $expiry_date = date("d-m-Y G:i:s", $account->role_expire[$rid]);
+        else $expiry_date = '';
+        $form['account']['role_expire_' . $rid] = array(
+          '#title' => t("%role expires", array('%role' => $role)),
+          '#type' => 'textfield',
+          '#default_value' => $expiry_date,
+          '#weight' => $i,
+          '#attributes' => array('class' => 'role-expire-role-expiry'),
+          '#description' => t("Leave blank for indefinite time, enter date and time in format: <em>dd-mm-yyyy hh:mm:ss</em> or use relative time i.e. 1 day, 2 months, 1 year, 3 years.")
+        );
+        $i ++;
+      }
+
+      return $form;
+    }
+  } 
+  else if ($op == 'submit') {
+
+    if (isset($edit["roles"])) {
+      $roles = user_roles(true);
+      unset($roles[DRUPAL_AUTHENTICATED_RID]);  
+
+      // Make $edit array look better
+      $edit["role_expire"] = array();
+      foreach ($edit["roles"] as $rid => $role) {
+        $edit["role_expire"][$rid] = $edit["role_expire_" . $rid];
+        unset($edit["role_expire_" . $rid]);
+      }
+    }
+  }
+  else if ($op == 'validate') {
+    if (isset($edit["roles"])) {
+      foreach ($edit["roles"] as $role) {
+        if ($edit["role_expire_" . $role]) {
+          $expiry_time = strtotime($edit["role_expire_" . $role]);
+          if (!$expiry_time) {
+            form_set_error("role_expire_" . $role, t("Role expiry date is not in correct format."));
+          }
+          if ($expiry_time <= time()) {
+            form_set_error("role_expire_" . $role, t("Role expiry date must be in the future."));
+          }
+        }
+      }
+    }
+  } 
+  else if ($op == 'insert') {
+    $roles = user_roles(true);
+    unset($roles[DRUPAL_AUTHENTICATED_RID]);  
+
+    // Update roles expiry for user
+    foreach ($edit["roles"] as $rid) {
+      if ($edit["role_expire"][$rid]) {
+
+  	  	// Check if table exists, if not, create it!
+  	    if (!db_table_exists("role_expire_" . $roles[$rid])) {
+          _role_expire_create_table($roles[$rid]);
+  	    }
+      
+  	  	$expiry_time = strtotime($edit["role_expire"][$rid]);
+  	    db_query("INSERT INTO {role_expire_%s} (uid, expiry_timestamp) VALUES (%d, '%s')", $roles[$rid], $account->uid, $expiry_time);
+  	  }
+  	  
+  	  unset($edit["role_expire"][$rid]);
+  	}
+  } 
+  else if ($op == 'update') {
+  	
+  	$roles = user_roles(true);
+    unset($roles[DRUPAL_AUTHENTICATED_RID]);  
+  	
+    // Update expiry date for each role
+    foreach ($roles as $rid => $role) {
+
+      // The role is being added
+      if (isset($edit["roles"][$rid])) {
+      	
+	      // Expiry variable has been provided
+	  	  if ($edit["role_expire"][$rid]) {
+	  	  	// Check if table exists, if not, create it!
+	  	  	$expiry_time = strtotime($edit["role_expire"][$rid]);
+	  	    if (!db_table_exists("role_expire_" . $role)) {
+              _role_expire_create_table($role);
+	      	  db_query("INSERT INTO {role_expire_%s} (uid, expiry_timestamp) VALUES (%d, '%s')", $role, $account->uid, $expiry_time);
+	  	    } 
+	  	    else {
+	  	      $et = db_result(db_query("SELECT expiry_timestamp FROM {role_expire_%s} WHERE uid=%d", $role, $account->uid));
+	  	      if ($et) {
+	  	        db_query("UPDATE {role_expire_%s} SET expiry_timestamp='%s' WHERE uid=%d", $role, $expiry_time, $account->uid);
+	  	      } 
+	  	      else {
+	  	        db_query("INSERT INTO {role_expire_%s} (uid, expiry_timestamp) VALUES (%d, '%s')", $role, $account->uid, $expiry_time);
+	  	      }
+	  	    }
+	  	    
+	  	  // Expiry date has been cleared (delete expiry timestamp from database)
+	  	  } 
+	  	  else if ($edit["role_expire"][$rid] === "") {
+	  	  	if (db_table_exists("role_expire_" . $role)) {
+	  	  	  db_query("DELETE FROM {role_expire_%s} WHERE uid=%d", $role, $account->uid);
+	  	  	}
+	  	  }   
+	  	  unset($edit["role_expire"][$rid]);   	
+      
+	  // The role is removed or ommited (not present in user's $edit array)
+      } 
+      else if ($category == 'account') {
+        if (db_table_exists("role_expire_" . $role)) {
+	  	  db_query("DELETE FROM {role_expire_%s} WHERE uid=%d", $role, $account->uid);
+	  	}
+      }  	  
+  	}
+  } 
+  else if ($op == 'delete') {
+    $roles = user_roles(true);
+    unset($roles[DRUPAL_AUTHENTICATED_RID]);  
+    
+    // Delete from all role expiry data for role related tables (if they exist)
+    foreach ($roles as $rid => $role) {
+      if (db_table_exists('role_expire_'. $role)) {
+      	db_query("DELETE FROM {role_expire_%s} WHERE uid=%d", $role, $account->uid);
+      }
+    }
+  } 
+  else if ($op == 'load') {
+  	$account->role_expire = array();
+  	
+    $roles = user_roles(true);
+    unset($roles[DRUPAL_AUTHENTICATED_RID]);  
+    
+    foreach($roles as $rid => $role) {
+      if (db_table_exists('role_expire_'. $role)) {
+        $expiry_timestamp = db_result(db_query("SELECT expiry_timestamp FROM {role_expire_%s} WHERE uid=%d", $role, $account->uid));
+        $account->role_expire[$rid] = $expiry_timestamp;
+      }
+    }
+  	
+  } 
+  else if ($op == 'view') {
+    if (user_access("view all role expiry dates") || $GLOBALS["user"]->uid == $account->uid) {
+    	
+      if ($account->roles) {
+        foreach ($account->roles as $key => $val) {
+          if ($account->role_expire[$key]) $roles[$key] =  t("%role - expires on %timedate", array('%role' => $val, '%timedate' => format_date($account->role_expire[$key])));
+          else $roles[$key] = t("%role - granted indefinatelly", array('%role' => $val));
+        }
+        
+        unset($roles[DRUPAL_AUTHENTICATED_RID]);
+	
+        if (count($roles) > 0) {
+          $account->content['summary']['roles'] = array(
+          '#type' => 'item',
+          '#title' => t('Roles'),
+          '#value' => theme('item_list', $roles),
+          '#attributes' => array('class' => 'role-expiry-roles'),
+          '#access' => (user_access("view all role expiry dates") || $GLOBALS["user"]->uid == $account->uid),
+          );
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implementation of hook_cron().
+ */
+function role_expire_cron() {	 
+  $roles = user_roles(true);
+  unset($roles[DRUPAL_AUTHENTICATED_RID]);  
+       	
+  // Update roles expiry for user
+  foreach ($roles as $rid => $role) {
+  	// Check if table exists, if not, create it! 	   
+  	if (db_table_exists("role_expire_" . $roles[$rid])) {
+  	  $result = db_query("SELECT uid FROM {role_expire_%s} WHERE expiry_timestamp<=%d", $role, time());
+      while ($row = db_fetch_object($result)) {
+  	    role_expire_remove_role($row->uid, $rid);
+      }
+  	} 
+  	else {
+  	  _role_expire_create_table($roles[$rid]);
+  	}
+  }
+}
+
+function role_expire_set_expiry_date($uid, $rid, $expiry_timestamp) {
+  // Check if user is in role
+  $account = user_load(array("uid" => $uid));
+  if ($account !== FALSE && isset($account->roles[$rid])) {
+    $role = db_result(db_query('SELECT name FROM {role} WHERE rid = %d', $rid));  
+  
+    // Check if table exists, if not, create it!
+    if (!db_table_exists("role_expire_". $role)) {
+      _role_expire_create_table($role);
+    } 
+    else {
+      db_query("DELETE FROM {role_expire_%s} WHERE uid=%d", $role, $uid);
+    }
+      
+    db_query("INSERT INTO {role_expire_%s} (uid, expiry_timestamp) VALUES (%d, '%s')", $role, $uid, $expiry_timestamp);
+  }
+}
+
+function role_expire_clear_expiry_date($uid, $rid) {
+  // Check if user is in role
+  $account = user_load(array("uid" => $uid));
+  if ($account !== FALSE && isset($account->roles[$rid])) {
+    $role = db_result(db_query('SELECT name FROM {role} WHERE rid = %d', $rid));  
+  
+    // Check if table exists, if not, create it!
+    if (db_table_exists("role_expire_". $role)) {
+      db_query("DELETE FROM {role_expire_%s} WHERE uid=%d", $role, $uid);
+    }
+  }
+}
+
+function role_expire_add_role($uid, $rid, $expiry_timestamp = NULL) {
+  $role = db_result(db_query("SELECT name FROM {role} WHERE rid = %d", $rid));
+  $account = user_load(array('uid' => (int)$uid));
+  
+  // Skip adding the role to the user if they already have it.
+  if ($account !== FALSE && !isset($account->roles[$rid])) {
+    $roles = $account->roles + array($rid => $role);
+    user_save($account, array('roles' => $roles));
+  }
+  
+  if ($expiry_timestamp) {
+    role_expire_set_expiry_date($uid, $rid, $expiry_timestamp);
+  }
+}
+
+function role_expire_remove_role($uid, $rid) {
+  $account = user_load(array('uid' => (int)$uid));
+
+  // Skip removing the role from the user if they already don't have it.
+  if ($account !== FALSE && isset($account->roles[$rid])) {
+    $roles = $account->roles;
+    unset($roles[$rid]);
+    user_save($account, array('roles' => $roles));
+  }
+}
+
+function role_expire_get_expiry_date($uid, $rid) {
+  $role = db_result(db_query('SELECT name FROM {role} WHERE rid = %d', $rid));
+  if (db_table_exists("role_expire_" . $role)) {
+    $expiry_timestamp = db_result(db_query("SELECT expiry_timestamp FROM {role_expire_%s} WHERE uid=%d", $role, $uid));
+    
+    drupal_set_message(format_date($expiry_timestamp));
+    
+    return $expiry_timestamp;
+  } 
+  else { 
+    return FALSE;
+  }
+}
+
+function _role_expire_create_table($role) {
+  $schema = drupal_get_schema_unprocessed("role_expire");
+  _drupal_initialize_schema("role_expire", $schema);
+      
+  $ret = array();
+  db_create_table($ret, "role_expire_". $role, $schema["role_expire_". $role]);
+  
+  return $ret;
+}

@@ -99,12 +99,12 @@ function role_expire_user($op, &$edit, &$account, $category = NULL) {
       if ($edit["role_expire"][$rid]) {
 
   	  	// Check if table exists, if not, create it!
-  	    if (!db_table_exists("role_expire_" . $roles[$rid])) {
-          _role_expire_create_table($roles[$rid]);
+  	    if (!db_table_exists("role_expire_" . $rid)) {
+          _role_expire_create_table($rid);
   	    }
       
   	  	$expiry_time = strtotime($edit["role_expire"][$rid]);
-  	    db_query("INSERT INTO {role_expire_%s} (uid, expiry_timestamp) VALUES (%d, '%s')", $roles[$rid], $account->uid, $expiry_time);
+  	    db_query("INSERT INTO {role_expire_%d} (uid, expiry_timestamp) VALUES (%d, '%s')", $rid, $account->uid, $expiry_time);
   	  }
   	  
   	  unset($edit["role_expire"][$rid]);
@@ -125,25 +125,25 @@ function role_expire_user($op, &$edit, &$account, $category = NULL) {
 	  	  if ($edit["role_expire"][$rid]) {
 	  	  	// Check if table exists, if not, create it!
 	  	  	$expiry_time = strtotime($edit["role_expire"][$rid]);
-	  	    if (!db_table_exists("role_expire_" . $role)) {
-              _role_expire_create_table($role);
-	      	  db_query("INSERT INTO {role_expire_%s} (uid, expiry_timestamp) VALUES (%d, '%s')", $role, $account->uid, $expiry_time);
+	  	    if (!db_table_exists("role_expire_" . $rid)) {
+              _role_expire_create_table($rid);
+	      	  db_query("INSERT INTO {role_expire_%d} (uid, expiry_timestamp) VALUES (%d, '%s')", $rid, $account->uid, $expiry_time);
 	  	    } 
 	  	    else {
-	  	      $et = db_result(db_query("SELECT expiry_timestamp FROM {role_expire_%s} WHERE uid=%d", $role, $account->uid));
+	  	      $et = db_result(db_query("SELECT expiry_timestamp FROM {role_expire_%d} WHERE uid=%d", $rid, $account->uid));
 	  	      if ($et) {
-	  	        db_query("UPDATE {role_expire_%s} SET expiry_timestamp='%s' WHERE uid=%d", $role, $expiry_time, $account->uid);
+	  	        db_query("UPDATE {role_expire_%d} SET expiry_timestamp='%s' WHERE uid=%d", $rid, $expiry_time, $account->uid);
 	  	      } 
 	  	      else {
-	  	        db_query("INSERT INTO {role_expire_%s} (uid, expiry_timestamp) VALUES (%d, '%s')", $role, $account->uid, $expiry_time);
+	  	        db_query("INSERT INTO {role_expire_%d} (uid, expiry_timestamp) VALUES (%d, '%s')", $rid, $account->uid, $expiry_time);
 	  	      }
 	  	    }
 	  	    
 	  	  // Expiry date has been cleared (delete expiry timestamp from database)
 	  	  } 
 	  	  else if ($edit["role_expire"][$rid] === "") {
-	  	  	if (db_table_exists("role_expire_" . $role)) {
-	  	  	  db_query("DELETE FROM {role_expire_%s} WHERE uid=%d", $role, $account->uid);
+	  	  	if (db_table_exists("role_expire_" . $rid)) {
+	  	  	  db_query("DELETE FROM {role_expire_%d} WHERE uid=%d", $rid, $account->uid);
 	  	  	}
 	  	  }   
 	  	  unset($edit["role_expire"][$rid]);   	
@@ -151,8 +151,8 @@ function role_expire_user($op, &$edit, &$account, $category = NULL) {
 	  // The role is removed or ommited (not present in user's $edit array)
       } 
       else if ($category == 'account') {
-        if (db_table_exists("role_expire_" . $role)) {
-	  	  db_query("DELETE FROM {role_expire_%s} WHERE uid=%d", $role, $account->uid);
+        if (db_table_exists("role_expire_" . $rid)) {
+	  	  db_query("DELETE FROM {role_expire_%d} WHERE uid=%d", $rid, $account->uid);
 	  	}
       }  	  
   	}
@@ -163,8 +163,8 @@ function role_expire_user($op, &$edit, &$account, $category = NULL) {
     
     // Delete from all role expiry data for role related tables (if they exist)
     foreach ($roles as $rid => $role) {
-      if (db_table_exists('role_expire_'. $role)) {
-      	db_query("DELETE FROM {role_expire_%s} WHERE uid=%d", $role, $account->uid);
+      if (db_table_exists('role_expire_'. $rid)) {
+      	db_query("DELETE FROM {role_expire_%d} WHERE uid=%d", $rid, $account->uid);
       }
     }
   } 
@@ -175,8 +175,8 @@ function role_expire_user($op, &$edit, &$account, $category = NULL) {
     unset($roles[DRUPAL_AUTHENTICATED_RID]);  
     
     foreach($roles as $rid => $role) {
-      if (db_table_exists('role_expire_'. $role)) {
-        $expiry_timestamp = db_result(db_query("SELECT expiry_timestamp FROM {role_expire_%s} WHERE uid=%d", $role, $account->uid));
+      if (db_table_exists('role_expire_'. $rid)) {
+        $expiry_timestamp = db_result(db_query("SELECT expiry_timestamp FROM {role_expire_%d} WHERE uid=%d", $rid, $account->uid));
         $account->role_expire[$rid] = $expiry_timestamp;
       }
     }
@@ -217,14 +217,14 @@ function role_expire_cron() {
   // Update roles expiry for user
   foreach ($roles as $rid => $role) {
   	// Check if table exists, if not, create it! 	   
-  	if (db_table_exists("role_expire_" . $roles[$rid])) {
-  	  $result = db_query("SELECT uid FROM {role_expire_%s} WHERE expiry_timestamp<=%d", $role, time());
+  	if (db_table_exists("role_expire_" . $rid)) {
+  	  $result = db_query("SELECT uid FROM {role_expire_%d} WHERE expiry_timestamp<=%d", $rid, time());
       while ($row = db_fetch_object($result)) {
   	    role_expire_remove_role($row->uid, $rid);
       }
   	} 
   	else {
-  	  _role_expire_create_table($roles[$rid]);
+  	  _role_expire_create_table($rid);
   	}
   }
 }
@@ -233,29 +233,26 @@ function role_expire_set_expiry_date($uid, $rid, $expiry_timestamp) {
   // Check if user is in role
   $account = user_load(array("uid" => $uid));
   if ($account !== FALSE && isset($account->roles[$rid])) {
-    $role = db_result(db_query('SELECT name FROM {role} WHERE rid = %d', $rid));  
   
     // Check if table exists, if not, create it!
-    if (!db_table_exists("role_expire_". $role)) {
-      _role_expire_create_table($role);
+    if (!db_table_exists("role_expire_". $rid)) {
+      _role_expire_create_table($rid);
     } 
     else {
-      db_query("DELETE FROM {role_expire_%s} WHERE uid=%d", $role, $uid);
+      db_query("DELETE FROM {role_expire_%d} WHERE uid=%d", $rid, $uid);
     }
       
-    db_query("INSERT INTO {role_expire_%s} (uid, expiry_timestamp) VALUES (%d, '%s')", $role, $uid, $expiry_timestamp);
+    db_query("INSERT INTO {role_expire_%d} (uid, expiry_timestamp) VALUES (%d, '%s')", $rid, $uid, $expiry_timestamp);
   }
 }
 
 function role_expire_clear_expiry_date($uid, $rid) {
   // Check if user is in role
   $account = user_load(array("uid" => $uid));
-  if ($account !== FALSE && isset($account->roles[$rid])) {
-    $role = db_result(db_query('SELECT name FROM {role} WHERE rid = %d', $rid));  
-  
+  if ($account !== FALSE && isset($account->roles[$rid])) {  
     // Check if table exists, if not, create it!
-    if (db_table_exists("role_expire_". $role)) {
-      db_query("DELETE FROM {role_expire_%s} WHERE uid=%d", $role, $uid);
+    if (db_table_exists("role_expire_". $rid)) {
+      db_query("DELETE FROM {role_expire_%d} WHERE uid=%d", $rid, $uid);
     }
   }
 }
@@ -287,9 +284,8 @@ function role_expire_remove_role($uid, $rid) {
 }
 
 function role_expire_get_expiry_date($uid, $rid) {
-  $role = db_result(db_query('SELECT name FROM {role} WHERE rid = %d', $rid));
-  if (db_table_exists("role_expire_" . $role)) {
-    $expiry_timestamp = db_result(db_query("SELECT expiry_timestamp FROM {role_expire_%s} WHERE uid=%d", $role, $uid));
+  if (db_table_exists("role_expire_" . $rid)) {
+    $expiry_timestamp = db_result(db_query("SELECT expiry_timestamp FROM {role_expire_%d} WHERE uid=%d", $rid, $uid));
     
     drupal_set_message(format_date($expiry_timestamp));
     
@@ -300,12 +296,12 @@ function role_expire_get_expiry_date($uid, $rid) {
   }
 }
 
-function _role_expire_create_table($role) {
+function _role_expire_create_table($rid) {
   $schema = drupal_get_schema_unprocessed("role_expire");
   _drupal_initialize_schema("role_expire", $schema);
       
   $ret = array();
-  db_create_table($ret, "role_expire_". $role, $schema["role_expire_". $role]);
+  db_create_table($ret, "role_expire_". $rid, $schema["role_expire_". $rid]);
   
   return $ret;
 }

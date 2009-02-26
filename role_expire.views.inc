@@ -16,9 +16,9 @@ function role_expire_views_data() {
       	
   // Prepare views structures
   foreach ($roles as $rid => $role) {
-	$data['role_expire_'. $role]['table']['group']  = t('User');
+	$data['role_expire_'. $rid]['table']['group']  = t('User');
 	  
-	$data['role_expire_'. $role]['table']['join'] = array(
+	$data['role_expire_'. $rid]['table']['join'] = array(
 	  'users' => array(
 	    'left_field' => 'uid',
 	    'field' => 'uid',
@@ -34,7 +34,7 @@ function role_expire_views_data() {
 	  ),
 	);
 	  
-	$data['role_expire_'. $role]['expiry_timestamp'] = array(
+	$data['role_expire_'. $rid]['expiry_timestamp'] = array(
 	  'title' => $role ." ". t('role expiry time'), 
 	  'help' => t('Time and date the role will expire.'), 
 	  'field' => array(

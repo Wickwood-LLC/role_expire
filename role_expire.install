@@ -14,8 +14,9 @@ function role_expire_schema() {
   $roles = user_roles(true);
   unset($roles[DRUPAL_AUTHENTICATED_RID]);
       
+  $schema = array();
   foreach ($roles as $rid => $role) {
-    $schema['role_expire_'. $role] = array(
+    $schema['role_expire_'. $rid] = array(
       'description' => t('Expiry information for '. $role),
       'fields' => array(
         'uid' => array(
@@ -54,3 +55,40 @@ function role_expire_uninstall() {
   drupal_uninstall_schema('role_expire');
 }
 
+function role_expire_update_6100() {
+  $roles = user_roles(true);
+  unset($roles[DRUPAL_AUTHENTICATED_RID]);
+      
+  $schema = array();
+  $ret = array();
+  foreach ($roles as $rid => $role) {
+    $schema['role_expire_'. $rid] = array(
+      'description' => t('Expiry information for '. $role),
+      'fields' => array(
+        'uid' => array(
+          'type' => 'int',
+          'length' => 11,
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'description' => t('User ID connected with expiry date.')
+        ),
+        'expiry_timestamp' => array(
+          'description' => t('Role expiry timestamp.'),
+          'type' => 'varchar',
+          'not null' => TRUE,
+          'length' => 255)
+        ),
+      'indexes' => array(
+        'uid' => array('uid'),
+        )
+      );
+      
+    if (db_table_exists("role_expire_". $role)) {
+      db_rename_table($ret, "role_expire_". $role, "role_expire_". $rid);
+    } else {
+      db_create_table($ret, "role_expire_". $rid, $schema["role_expire_". $rid]); 
+    }
+  } 
+  
+  return $ret;
+}

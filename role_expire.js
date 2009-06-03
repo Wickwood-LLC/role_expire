@@ -4,7 +4,7 @@
  * @file
  * Role Expire js
  *
- * Set of jQuery related rputines
+ * Set of jQuery related routines.
  */
 
 $(document).ready(function() {

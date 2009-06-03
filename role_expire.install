@@ -3,7 +3,7 @@
 
 /**
  * @file
- * Role Expire install
+ * Role expire install.
  */
 
 
@@ -11,33 +11,34 @@
  * Implementation of hook_schema.
  */
 function role_expire_schema() {
-  $roles = user_roles(true);
-  unset($roles[DRUPAL_AUTHENTICATED_RID]);
-      
-  $schema = array();
-  foreach ($roles as $rid => $role) {
-    $schema['role_expire_'. $rid] = array(
-      'description' => t('Expiry information for '. $role),
-      'fields' => array(
-        'uid' => array(
-          'type' => 'int',
-          'length' => 11,
-          'unsigned' => TRUE,
-          'not null' => TRUE,
-          'description' => t('User ID connected with expiry date.')
-        ),
-        'expiry_timestamp' => array(
-          'description' => t('Role expiry timestamp.'),
-          'type' => 'varchar',
-          'not null' => TRUE,
-          'length' => 255)
-        ),
-      'indexes' => array(
-        'uid' => array('uid'),
-        )
-      );
-  }
-  
+  $schema['role_expire'] = array(
+    'description' => t('Expiration time for the user roles.'),
+    'fields' => array(
+      'uid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => t('User ID connected with expiration time.')
+      ),  
+      'rid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The role ID assigned to the user.',
+      ),  
+      'expiry_timestamp' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,      
+        'description' => t('Role expiration timestamp.'),
+      )
+    ),
+    'indexes' => array(
+      'uid' => array('uid'),
+    ),
+  );
   return $schema;
 }
 
@@ -89,6 +90,24 @@ function role_expire_update_6100() {
       db_create_table($ret, "role_expire_". $rid, $schema["role_expire_". $rid]); 
     }
   } 
+  
+  return $ret;
+}
+
+function role_expire_update_6120() {
+  drupal_install_schema('role_expire');
+  
+  $ret = array();
+  $roles = user_roles(true);
+  unset($roles[DRUPAL_AUTHENTICATED_RID]);
+
+  foreach ($roles as $rid => $role) {
+    $result = db_query("SELECT * FROM {role_expire_".$rid."}");
+    while ($row = db_fetch_object($result)) {
+      $ret[] = update_sql("INSERT INTO {role_expire} VALUES ({$row->uid}, {$rid}, {$row->expiry_timestamp})");
+    }
+    db_drop_table($ret, "role_expire_".$rid);
+  }
   
   return $ret;
 }

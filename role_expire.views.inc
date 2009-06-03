@@ -5,37 +5,23 @@
  * @file
  * Role Expire Views hooks
  *
- * Hooks for integrating Role Expire with Views
+ * Views module integration with the role expire module
  */
 
-
+/**
+ * Implementation of hook_views_data().
+ */
 function role_expire_views_data() {
-  // Get all roles
-  $roles = user_roles(true);
-  unset($roles[DRUPAL_AUTHENTICATED_RID]);  
-      	
-  // Prepare views structures
-  foreach ($roles as $rid => $role) {
-	$data['role_expire_'. $rid]['table']['group']  = t('User');
+	$data['role_expire']['table']['group']  = t('User');
 	  
-	$data['role_expire_'. $rid]['table']['join'] = array(
+	$data['role_expire']['table']['join'] = array(
 	  'users' => array(
 	    'left_field' => 'uid',
 	    'field' => 'uid',
 	  ),
-	  'node' => array(
-	    'left_field' => 'uid',
-	    'field' => 'uid',
-	  ),
-	  'node_revisions' => array(
-	    'left_table' => 'node',
-	    'left_field' => 'uid',
-	    'field' => 'uid',
-	  ),
-	);
-	  
-	$data['role_expire_'. $rid]['expiry_timestamp'] = array(
-	  'title' => $role ." ". t('role expiry time'), 
+	);	  
+	$data['role_expire']['expiry_timestamp'] = array(
+	  'title' => t('Role expiration time'), 
 	  'help' => t('Time and date the role will expire.'), 
 	  'field' => array(
 	    'handler' => 'views_handler_field_date',
@@ -47,8 +33,6 @@ function role_expire_views_data() {
 	  'filter' => array(
 	    'handler' => 'views_handler_filter_date',
 	  ),
-    );    
-  }
-  
+  );  
   return $data;
 }

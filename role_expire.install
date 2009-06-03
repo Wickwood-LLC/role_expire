@@ -95,8 +95,10 @@ function role_expire_update_6100() {
 }
 
 function role_expire_update_6120() {
+  // Install new schema
   drupal_install_schema('role_expire');
   
+  // Get all data from old databases and input insert new table
   $ret = array();
   $roles = user_roles(true);
   unset($roles[DRUPAL_AUTHENTICATED_RID]);
@@ -104,7 +106,7 @@ function role_expire_update_6120() {
   foreach ($roles as $rid => $role) {
     $result = db_query("SELECT * FROM {role_expire_".$rid."}");
     while ($row = db_fetch_object($result)) {
-      $ret[] = update_sql("INSERT INTO {role_expire} VALUES ({$row->uid}, {$rid}, {$row->expiry_timestamp})");
+        $ret[] = update_sql("INSERT INTO {role_expire} VALUES ({$row->uid}, {$rid}, {$row->expiry_timestamp})");
     }
     db_drop_table($ret, "role_expire_".$rid);
   }

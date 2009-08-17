@@ -39,6 +39,26 @@ function role_expire_schema() {
       'uid' => array('uid'),
     ),
   );
+  $schema['role_expire_length'] = array(
+    'description' => t('Length in days to assign each role by default.'),
+    'fields' => array(
+      'rid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => t('The role_id.')
+       ),
+      'duration' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => t('The default duration for the role.')
+       ),
+    ), 
+    'indexes' => array(
+    'rid' => array('rid'),
+    ),       
+  );
   return $schema;
 }
 
@@ -110,6 +130,34 @@ function role_expire_update_6120() {
     }
     db_drop_table($ret, "role_expire_".$rid);
   }
+  
+  return $ret;
+}
+
+function role_expire_update_6121() {
+  $ret = array();
+  $role_expire_length_schema = array(
+    'description' => t('Length in days to assign each role by default.'),
+    'fields' => array(
+      'rid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => t('The role_id.')
+       ),
+      'duration' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => t('The default duration for the role.')
+       ),
+    ), 
+    'indexes' => array(
+    'rid' => array('rid'),
+    ),       
+  );
+  
+  db_create_table($ret, 'role_expire_length', $role_expire_length_schema);
   
   return $ret;
 }

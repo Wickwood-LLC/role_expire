@@ -221,9 +221,10 @@ function role_expire_user_admin_role_submit($form, &$form_state) {
 function role_expire_user($op, &$edit, &$account, $category = NULL) {
   switch ($op) {    
   case 'form':
+    if ($category == 'account') {
       return role_expire_add_expiration_input($account);
-    break;
-    
+    }
+  break;  
   case 'validate':
     if (isset($edit['roles'])) {
       $time = time();
@@ -243,10 +244,15 @@ function role_expire_user($op, &$edit, &$account, $category = NULL) {
         
   case 'submit':
     // We go over all existing roles, because use might have disabled a role.
-    $edit['role_expire'] = array();
     foreach (_role_expire_get_role() as $rid => $role) {
-      // Normalize role expire array.
-      $edit["role_expire"][$rid] = !empty($edit['role_expire_' . $rid]) && !empty($edit['roles'][$rid]) ? $edit['role_expire_' . $rid] : '';
+      // New expiry date has been set, and the role exists.
+        if (!empty($edit['role_expire_' . $rid]) && !empty($edit['roles'][$rid])) {
+          $edit["role_expire"][$rid] = $edit['role_expire_' . $rid];
+        }
+        // Role exists but the expiry date is explicitly set to blank.
+        else if (isset($edit['role_expire_' . $rid]) && empty($edit['role_expire_' . $rid])) {
+          $edit["role_expire"][$rid] = '';
+        }
       unset($edit['role_expire_'. $rid]);
     }
     break;
@@ -270,7 +276,6 @@ function role_expire_user($op, &$edit, &$account, $category = NULL) {
 
   case 'update':
   case 'insert':  
-
 
     // Add roles expiry information for the user role.
     $edit += array('role_expire' => array());
@@ -308,22 +313,24 @@ function role_expire_user($op, &$edit, &$account, $category = NULL) {
     
   case 'view':
     global $user;
-    if (user_access('administer role expire') || user_access('administer users') || $user->uid == $account->uid) {
-      $roles = array();
-      $expiry_roles = role_expire_get_all_user_records($account->uid);
-      foreach ($account->roles as $key => $val) {
-        if ($expiry_roles[$key]) {
-          $roles[$key] =  t("%role role - expires on %timedate", array('%role' => ucfirst($val), '%timedate' => format_date($expiry_roles[$key])));
+    if ($category == 'account') {
+      if (user_access('administer role expire') || user_access('administer users') || $user->uid == $account->uid) {
+        $roles = array();
+        $expiry_roles = role_expire_get_all_user_records($account->uid);
+        foreach ($account->roles as $key => $val) {
+          if ($expiry_roles[$key]) {
+            $roles[$key] =  t("%role role - expires on %timedate", array('%role' => ucfirst($val), '%timedate' => format_date($expiry_roles[$key])));
+          }
         }
-      }
-      if ($roles) {
-        $account->content['summary']['role_expire'] = array(
-          '#type' => 'item',
-          '#title' => t('Role expiration'),
-          '#value' => theme('item_list', $roles),
-          '#attributes' => array('class' => 'role-expiry-roles'),
-        );
-      }
+        if ($roles) {
+          $account->content['summary']['role_expire'] = array(
+            '#type' => 'item',
+            '#title' => t('Role expiration'),
+            '#value' => theme('item_list', $roles),
+            '#attributes' => array('class' => 'role-expiry-roles'),
+          );
+        }
+      }      
     }
     break;
   }

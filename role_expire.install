@@ -35,9 +35,7 @@ function role_expire_schema() {
         'description' => t('Role expiration timestamp.'),
       )
     ),
-    'indexes' => array(
-      'uid' => array('uid'),
-    ),
+    'primary key' => array('uid', 'rid'),
   );
   $schema['role_expire_length'] = array(
     'description' => t('Length in days to assign each role by default.'),
@@ -55,9 +53,7 @@ function role_expire_schema() {
         'description' => t('The default duration for the role.')
        ),
     ), 
-    'indexes' => array(
-    'rid' => array('rid'),
-    ),       
+    'primary key' => array('rid'),
   );
   return $schema;
 }
@@ -159,5 +155,17 @@ function role_expire_update_6121() {
   
   db_create_table($ret, 'role_expire_length', $role_expire_length_schema);
   
+  return $ret;
+}
+
+/**
+ * Set up primary keys on the tables
+ */
+function role_expire_update_6122() {
+  $ret = array();
+  db_drop_index($ret, 'role_expire', 'uid');
+  db_add_primary_key($ret, 'role_expire', array('uid', 'rid'));
+  db_drop_index($ret, 'role_expire_length', 'rid');
+  db_add_primary_key($ret, 'role_expire_length', array('rid'));
   return $ret;
 }

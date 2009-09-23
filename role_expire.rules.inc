@@ -17,12 +17,12 @@ function role_expire_rules_action_info() {
       'user' => array(
         'type' => 'user',
         'label' => t('The user which the expiration time will be added'),
-      ), 
+      ),
     ),
     'eval input' => array('timestamp'),
-    'module' => 'Role expire',    
+    'module' => 'Role expire',
   );
-  
+
   $items['role_expire_rules_action_remove_role_expire'] = array(
     'label' => t('Remove expire time from role'),
     'help' => t('Remove an expiration time to a role a user has. This action does not remove the role, only the expiration time.'),
@@ -30,11 +30,11 @@ function role_expire_rules_action_info() {
       'user' => array(
         'type' => 'user',
         'label' => t('The user which the expiration time will be removed'),
-      ), 
+      ),
     ),
-    'module' => 'Role expire',    
+    'module' => 'Role expire',
   );
-    
+
   return $items;
 }
 
@@ -51,10 +51,10 @@ function role_expire_rules_action_set_role_expire($account, $settings) {
 function role_expire_rules_action_set_role_expire_form($settings = array(), &$form) {
   $settings += array('rid' => '', 'timestamp' => '');
 
-   
+
   // The role ID.
   $form['settings']['rid'] = _role_expire_get_rids($settings);
-  
+
   //The timestamp.
   $form['settings']['timestamp'] = array(
     '#type' => 'textfield',
@@ -72,7 +72,7 @@ function role_expire_rules_action_set_role_expire_validate($form, $form_state) {
   $timestamp = strtotime($form_state['values']['settings']['timestamp']);
   if (!$timestamp) {
     form_set_error('timestamp', t('Role expiration time is not in correct format.'));
-  }  
+  }
 }
 
 /**
@@ -87,7 +87,7 @@ function role_expire_rules_action_remove_role_expire($account, $settings) {
  */
 function role_expire_rules_action_remove_role_expire_form($settings = array(), &$form) {
   $settings += array('rid' => '');
-   
+
   // The role ID.
   $form['settings']['rid'] = _role_expire_get_rids($settings);
 }
@@ -109,5 +109,5 @@ function _role_expire_get_rids($settings) {
     '#required' => TRUE,
     '#description' => t('Select a role.'),
     '#default_value' => $settings['rid'],
-  );    
+  );
 }

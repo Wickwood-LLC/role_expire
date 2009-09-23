@@ -157,6 +157,15 @@ function role_expire_views_api() {
 }
 
 /**
+ * Implementation of hook_migrate_init().
+ */
+function role_expire_migrate_init() {
+  // Don't load migration support unless we need it
+  $path = drupal_get_path('module', 'role_expire') . '/role_expire.migrate.inc';
+  include_once($path);
+}
+
+/**
  * Implementation of hook_perm().
  */
 function role_expire_perm() {

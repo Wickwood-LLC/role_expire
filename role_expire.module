@@ -389,7 +389,7 @@ function role_expire_add_expiration_input($account = NULL) {
         '#type' => 'textfield',
         '#default_value' => !empty($expiry_timestamp) ? date("d-m-Y G:i:s", $expiry_timestamp) : '',
         '#attributes' => array('class' => 'role-expire-role-expiry'),
-        '#description' => t("Leave blank for indefinite time, enter date and time in format: <em>dd-mm-yyyy hh:mm:ss</em> or use relative time i.e. 1 day, 2 months, 1 year, 3 years.")
+        '#description' => t("Leave blank for indefinite time, enter date and time in format: <em>yyyy-mm-dd hh:mm:ss</em> or use relative time i.e. 1 day, 2 months, 1 year, 3 years.")
       );
     }
   }

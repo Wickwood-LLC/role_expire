@@ -84,7 +84,6 @@ function role_expire_update_6100() {
       'fields' => array(
         'uid' => array(
           'type' => 'int',
-          'length' => 11,
           'unsigned' => TRUE,
           'not null' => TRUE,
           'description' => t('User ID connected with expiry date.')

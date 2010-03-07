@@ -55,6 +55,7 @@ function role_expire_get_all_user_records($uid) {
  * @return
  */
 function role_expire_delete_record($uid, $rid) {
+  // I wonder whether on every save if we are doing this?.
   db_query("DELETE FROM {role_expire} WHERE uid=%d AND rid = %d", $uid, $rid);
 }
 /**
@@ -229,6 +230,17 @@ function role_expire_user_admin_role_submit($form, &$form_state) {
  * Implementation of hook_user().
  */
 function role_expire_user($op, &$edit, &$account, $category = NULL) {
+/*  print("<pre>");
+  print("<h1>");
+  print_r($op);
+  print("</h1>");
+  print_r($edit);
+  print_r($account);
+  print("ROLES??");
+  print_r(_role_static_user_roles($account->uid));
+  print("DIFF");
+  print_r(array_diff( _role_static_user_roles($account->uid),$account->roles));
+  print('</pre>');*/
   switch ($op) {
   case 'form':
     if ($category == 'account') {
@@ -239,7 +251,7 @@ function role_expire_user($op, &$edit, &$account, $category = NULL) {
     if (isset($edit['roles'])) {
       $time = time();
       foreach ($edit['roles'] as $rid => $role) {
-        if ($edit['role_expire_'. $role]) {
+        if (is_array($edit) && array_key_exists('role_expire_'. $role, $edit) && $edit['role_expire_'. $role] != '') {
           $expiry_time = strtotime($edit['role_expire_'. $role]);
           if (!$expiry_time) {
             form_set_error('role_expire_'. $role, t("Role expiry time is not in correct format."));
@@ -252,57 +264,51 @@ function role_expire_user($op, &$edit, &$account, $category = NULL) {
     }
     break;
 
-  case 'submit':
-    // We go over all existing roles, because use might have disabled a role.
-    foreach (_role_expire_get_role() as $rid => $role) {
-      // New expiry date has been set, and the role exists.
-        if (!empty($edit['role_expire_' . $rid]) && !empty($edit['roles'][$rid])) {
-          $edit["role_expire"][$rid] = $edit['role_expire_' . $rid];
-        }
-        // Role exists but the expiry date is explicitly set to blank.
-        elseif (isset($edit['role_expire_' . $rid]) && empty($edit['role_expire_' . $rid])) {
-          $edit["role_expire"][$rid] = '';
-        }
-      unset($edit['role_expire_'. $rid]);
-    }
-    break;
-
   case 'after_update':
+    
+    // This adds any new roles that have been given to the user.
     $new_roles = array_diff($account->roles, _role_static_user_roles($account->uid));
     // We have the new roles, loop over them and see whether we need to assign expiry to them.
     foreach ($new_roles as $role_id => $role) {
-      // Does a default expiry exist?.
-      $role_day_period = role_expire_get_default_duration($role_id);
-      if ($role_day_period) {
-        $user_role_expiry = role_expire_get_user_role_expiry_time($account->uid, $role_id);
-        // If the expiry is empty then we act!.
-        if (!$user_role_expiry) {
-          // Add the current date to the role day period and save it back to the role_expire row.
-          role_expire_write_record($account->uid, $role_id, mktime(0, 0, 0, date("m"), date("d") + $role_day_period, date("Y")));
-        }
-      }
+      role_expire_process_default_role_duration_for_user($role_id, $account->uid);
     }
+    
+    // This removes any new roles that have been given to the user.
+    $del_roles = array_diff(_role_static_user_roles($account->uid),$account->roles);
+    // We have the deleted roles, loop over them and see whether we need to assign expiry to them.
+    foreach ($del_roles as $role_id => $role) {
+      role_expire_delete_record($account->uid, $role_id);
+    }
+    
+    
   break;
 
   case 'update':
   case 'insert':
-
     // Add roles expiry information for the user role.
-    $edit += array('role_expire' => array());
-    foreach ($edit['role_expire'] as $rid => $role) {
+    // We go over all existing roles, because user might have disabled a role.
+    foreach (_role_expire_get_role() as $rid => $role) {
+      $role = $edit['role_expire_' . $rid];
       if ($role) {
         $expiry_timestamp = strtotime($role);
         role_expire_write_record($account->uid, $rid, $expiry_timestamp);
       }
       else {
-        // User input is blank, so delete record.
-        role_expire_delete_record($account->uid, $rid);
+        // Handle inserts correctly
+        if ($op == 'insert') {
+          // Check for Role
+          if (array_key_exists($rid, $edit['roles']) && $edit['roles'][$rid] == $rid) {
+            role_expire_process_default_role_duration_for_user($rid, $account->uid);
+          }
+        }
+        else {
+          // User input is blank, so delete record.
+          role_expire_delete_record($account->uid, $rid);          
+        }
       }
+      $edit['role_expire_' . $rid] = NULL;
     }
-    // We can remove this now.
-    unset($edit['role_expire']);
     break;
-
 
   case 'delete':
     // Delete user records.
@@ -383,7 +389,16 @@ function role_expire_add_expiration_input($account = NULL) {
     $form['roles']['#attributes'] = array('class' => 'role-expire-roles');
 
     foreach (_role_expire_get_role() as $rid => $role) {
-      $expiry_timestamp = role_expire_get_user_role_expiry_time($account->uid, $rid);
+      /*print("<pre>role " . $rid . "<br/>");
+      print("account->uid " . $account->uid . "<br>");
+      print(gettype($account));
+      print("</pre>");*/
+      if (is_object($account) and array_key_exists('uid', $account)) {
+        $expiry_timestamp = role_expire_get_user_role_expiry_time($account->uid, $rid);
+      }
+      else {
+        $expiry_timestamp = '';
+      }
       $form['role_expire_'. $rid] = array(
         '#title' => t("%role role expiration time", array('%role' => drupal_ucfirst($role))),
         '#type' => 'textfield',
@@ -427,4 +442,17 @@ function _role_expire_get_role() {
   $roles = user_roles(TRUE);
   unset($roles[DRUPAL_AUTHENTICATED_RID]);
   return $roles;
+}
+
+function role_expire_process_default_role_duration_for_user($role_id, $uid) {
+  // Does a default expiry exist?.
+  $role_day_period = role_expire_get_default_duration($role_id);
+  if ($role_day_period) {
+    $user_role_expiry = role_expire_get_user_role_expiry_time($uid, $role_id);
+    // If the expiry is empty then we act!.
+    if (!$user_role_expiry) {
+      // Add the current date to the role day period and save it back to the role_expire row.
+      role_expire_write_record($uid, $role_id, mktime(0, 0, 0, date("m"), date("d") + $role_day_period, date("Y")));
+    }
+  }
 }

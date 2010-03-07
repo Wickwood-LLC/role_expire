@@ -169,3 +169,15 @@ function role_expire_update_6122() {
   db_add_primary_key($ret, 'role_expire_length', array('rid'));
   return $ret;
 }
+
+/**
+ * Remove rogue roles from role_expire.
+ */
+function role_expire_update_6123() {
+  $ret = array();
+  $result = db_query("SELECT role_expire.rid, role_expire.uid FROM role_expire LEFT JOIN users_roles ON role_expire.rid=users_roles.rid AND role_expire.uid=users_roles.uid WHERE users_roles.uid IS NULL");
+  while ($row = db_fetch_object($result)) {
+      $ret[] = update_sql("DELETE FROM {role_expire} WHERE rid = {$row->rid} AND uid = {$row->uid}");
+  }
+  return $ret;
+}

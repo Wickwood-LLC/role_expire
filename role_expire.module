@@ -230,17 +230,6 @@ function role_expire_user_admin_role_submit($form, &$form_state) {
  * Implementation of hook_user().
  */
 function role_expire_user($op, &$edit, &$account, $category = NULL) {
-/*  print("<pre>");
-  print("<h1>");
-  print_r($op);
-  print("</h1>");
-  print_r($edit);
-  print_r($account);
-  print("ROLES??");
-  print_r(_role_static_user_roles($account->uid));
-  print("DIFF");
-  print_r(array_diff( _role_static_user_roles($account->uid),$account->roles));
-  print('</pre>');*/
   switch ($op) {
   case 'form':
     if ($category == 'account') {
@@ -389,10 +378,6 @@ function role_expire_add_expiration_input($account = NULL) {
     $form['roles']['#attributes'] = array('class' => 'role-expire-roles');
 
     foreach (_role_expire_get_role() as $rid => $role) {
-      /*print("<pre>role " . $rid . "<br/>");
-      print("account->uid " . $account->uid . "<br>");
-      print(gettype($account));
-      print("</pre>");*/
       if (is_object($account) and array_key_exists('uid', $account)) {
         $expiry_timestamp = role_expire_get_user_role_expiry_time($account->uid, $rid);
       }

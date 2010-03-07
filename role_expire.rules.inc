@@ -66,16 +66,6 @@ function role_expire_rules_action_set_role_expire_form($settings = array(), &$fo
 }
 
 /**
- * Action: Add expire time to role validation handler.
- */
-function role_expire_rules_action_set_role_expire_validate($form, $form_state) {
-  $timestamp = strtotime($form_state['values']['settings']['timestamp']);
-  if (!$timestamp) {
-    form_set_error('timestamp', t('Role expiration time is not in correct format.'));
-  }
-}
-
-/**
  * Action: Remove expire time from role
  */
 function role_expire_rules_action_remove_role_expire($account, $settings) {

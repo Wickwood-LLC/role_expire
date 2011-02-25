@@ -1,4 +1,3 @@
-$Id$ 
 
 role_expire.module implements the following functionality:
 - Selecting a role (or roles) on user_profile_form triggers a textfield (or textfields) where admins can enter expire date for selected role(s).

@@ -1,4 +1,3 @@
-$Id$
 
 REQUIREMENTS:
 In order to enjoy full potential of role_expire module you need to properly configure Cron job on your server (http://drupal.org/cron) or install poormanscron.module (http://drupal.org/project/poormanscron).

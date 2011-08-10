@@ -52,9 +52,6 @@ function role_expire_get_all_user_records($uid) {
  * @return
  */
 function role_expire_delete_record($uid, $rid) {
-  // I wonder whether on every save if we are doing this?.
-  // TODO Please review the conversion of this statement to the D7 database API syntax.
-  /* db_query("DELETE FROM {role_expire} WHERE uid=%d AND rid = %d", $uid, $rid) */
   db_delete('role_expire')
   ->condition('uid', $uid)
   ->condition('rid', $rid)
@@ -68,8 +65,6 @@ function role_expire_delete_record($uid, $rid) {
  * @return
  */
 function role_expire_delete_user_records($uid) {
-  // TODO Please review the conversion of this statement to the D7 database API syntax.
-  /* db_query("DELETE FROM {role_expire} WHERE uid = %d", $uid) */
   db_delete('role_expire')
   ->condition('uid', $uid)
   ->execute();
@@ -407,24 +402,41 @@ function role_expire_cron() {
     $roles = _role_expire_get_role();
     foreach ($expires as $expire) {
 
+      // Remove the role expiration record from the role_expires table.
+      role_expire_delete_record($expire->uid, $expire->rid);
+
       // Remove the role from the user.
       // TODO Convert "user_load" to "user_load_multiple" if "$expire['uid']" is other than a uid.
       // To return a single user object, wrap "user_load_multiple" with "array_shift" or equivalent.
       // Example: array_shift(user_load_multiple(array(), $expire['uid']))
       $account = user_load($expire->uid);
-      $edit = $account->roles;
-      unset($edit[$expire->rid]);
-      // In the documentation for the role_expire implementation of hook_user we
-      // state to use $category = 'account'.  We don't do that here because
-      // that would cause the delete to occur twice.
-      user_save($account, array('roles' => $edit), NULL);
 
-      // Remove the role expiration record.
-      role_expire_delete_record($expire->uid, $expire->rid);
-      watchdog('role expire',
-              'Removed role @role from user @account.',
-              array('@role' => $roles[$expire->rid], '@account' => $account->name)
-              );
+      // If the account *does* exist, update it.
+      if (!empty($account)) {
+        $edit = $account->roles;
+        unset($edit[$expire->rid]);
+        // In the documentation for the role_expire implementation of hook_user we
+        // state to use $category = 'account'.  We don't do that here because
+        // that would cause the delete to occur twice.
+        user_save($account, array('roles' => $edit), NULL);
+
+        // Handle the bizarre case of role_expire not being a valid role.
+        $role_name = (isset($roles[$expire->rid])) ? $roles[$expire->rid] : t('-unset-');
+        watchdog('role expire',
+                'Removed role @role from user @account.',
+                array('@role' => $role_name, '@account' => $account->name)
+                );
+      }
+      else {
+
+        // The account doesn't exist. Database altered outside of Drupal.
+        // Throw a warning message.
+        watchdog('role expire',
+                'Data integrity warning: Role_expire table updated, but no user with uid @uid.',
+                array('@uid' => $expire->uid,),
+                WATCHDOG_WARNING
+                );
+      }
     }
   }
 }
@@ -455,7 +467,7 @@ function role_expire_add_expiration_input($account = NULL) {
       $form['role_expire_' . $rid] = array(
         '#title' => t("%role role expiration time", array('%role' => drupal_ucfirst($role))),
         '#type' => 'textfield',
-        '#default_value' => !empty($expiry_timestamp) ? date("Y-m-d G:i:s", $expiry_timestamp) : '',
+        '#default_value' => !empty($expiry_timestamp) ? date("Y-m-d H:i:s", $expiry_timestamp) : '',
         '#attributes' => array('class' => array('role-expire-role-expiry')),
         '#description' => t("Leave blank for default role expiry (never, or the duration you have set for the role), enter date and time in format: <em>yyyy-mm-dd hh:mm:ss</em> or use relative time i.e. 1 day, 2 months, 1 year, 3 years.")
       );

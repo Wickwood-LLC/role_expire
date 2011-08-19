@@ -184,7 +184,11 @@ function role_expire_get_expired($time = '') {
  * Implements hook_views_api().
  */
 function role_expire_views_api() {
-  return array("api" => views_api_version());
+  // We can't just return "what is the currently installed views API version!
+  // We have to specify which version of the API we designed this implementation
+  // around.
+  // return array("api" => views_api_version());
+  return array('api' => '3.0');
 }
 
 /**
@@ -305,24 +309,29 @@ function role_expire_user_update(&$edit, $account, $category) {
       }
     }
 
-    // This adds default expiration to any new roles that have been given to the user.
-    $new_roles = array_diff(array_keys($edit['roles']), array_keys($edit['original']->roles));
-    if (isset($new_roles)) {
-      // We have the new roles, loop over them and see whether we need to assign expiry to them.
-      foreach ($new_roles as $role_id) {
-        role_expire_process_default_role_duration_for_user($role_id, $account->uid);
-      }
-    }
-    // This removes expiration for roles that have been removed from the user.
-    $del_roles = array_diff(array_keys($edit['original']->roles), array_keys($edit['roles']));
-    if (isset($del_roles)) {
-      // We have the deleted roles, loop over them and remove their expiry info.
-      foreach ($del_roles as $role_id) {
-        role_expire_delete_record($account->uid, $role_id);
-      }
-    }
-  }
+    if (isset($edit['roles'])) {
 
+      // Add default expiration to any new roles that have been given to the user.
+      $new_roles = array_diff(array_keys($edit['roles']), array_keys($edit['original']->roles));
+      if (isset($new_roles)) {
+        // We have the new roles, loop over them and see whether we need to assign expiry to them.
+        foreach ($new_roles as $role_id) {
+          role_expire_process_default_role_duration_for_user($role_id, $account->uid);
+        }
+      }
+
+      // Remove expiration for roles that have been removed from the user.
+      $del_roles = array_diff(array_keys($edit['original']->roles), array_keys($edit['roles']));
+      if (isset($del_roles)) {
+        // We have the deleted roles, loop over them and remove their expiry info.
+        foreach ($del_roles as $role_id) {
+          role_expire_delete_record($account->uid, $role_id);
+        }
+      }
+
+    } // if edit[roles]
+
+  } // if category && user_access
 }
 
 

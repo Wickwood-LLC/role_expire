@@ -1,24 +1,5 @@
 <?php
 
-///**
-// * @package RoleExpireUnitTestCase
-// */
-//class RoleExpireUnitTestCase extends DrupalUnitTestCase {
-//
-//public static function getInfo() {
-//
-//  return array(
-//    'name' => 'Role Expire unit tests',
-//    'description' => 'Unit tests for the Role Expire module.',
-//    'group' => 'Role Expire',
-//  );
-//
-//}
-//
-//
-//} // class RoleExpireUnitTestCase
-
-
 /**
  * @package RoleExpireWebTestCase
  */
@@ -64,7 +45,11 @@ public function testRoleExpire_tests() {
 
   // NOTE: No need to test in the creation/deletion of users and roles. Let
   // the *user* simpletests do that. NOTE: user.test takes a long time.
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> 7702ac26609fc48d9f31633e2dafeb4b3af18d78
   // Create a role *without* a default expiration date.
   // ***covered by user.test***
 
@@ -94,7 +79,11 @@ public function testRoleExpire_tests() {
                          )
              )
             );
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> 7702ac26609fc48d9f31633e2dafeb4b3af18d78
   } // foreach field value
 
   $field = 'role_expire_'.$rid;
@@ -105,7 +94,11 @@ public function testRoleExpire_tests() {
   $edit = array($field => $yesterday);
   $result = $this->drupalPost($user_edit_path,$edit,t('Save'));
   $this->assertText(t('Role expiry must be in the future.'),t('Yesterday should be invalid'));
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> 7702ac26609fc48d9f31633e2dafeb4b3af18d78
   // Edit user: add completely invalid expiration date.
   $invalid_date = 'completely invalid date';
   $edit = array($field => $invalid_date);

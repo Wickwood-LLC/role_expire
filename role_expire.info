@@ -2,3 +2,5 @@ name = Role Expire
 description = "Enables user roles to expire on given time and day."
 core = 7.x
 files[] = tests/role_expire.test
+files[] = role_expire.views.inc
+files[] = role_expire.rules.inc

@@ -666,9 +666,11 @@ function _role_expire_validate_role_expires(&$form, &$form_state) {
       if (!$expiry_time) {
         form_set_error($name, t("Role expiry is not in correct format."));
       }
+      /*
       if ($expiry_time <= $time) {
         form_set_error($name, t("Role expiry must be in the future."));
       }
+      */
     }
   }
 }

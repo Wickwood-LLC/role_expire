@@ -1,6 +1,7 @@
 name = Role Expire
-description = "Enables user roles to expire on given time and day."
+description = "Enables user roles to expire on given time and day. Modified by WWM to remove restriction on expiration dates only in the past."
 core = 7.x
+version = 7.x-1.0-beta1+6-dev-wwm
 files[] = tests/role_expire.test
 files[] = role_expire.views.inc
 files[] = role_expire.rules.inc

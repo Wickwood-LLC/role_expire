@@ -15,5 +15,7 @@ Role expire provides expiration to roles attached to users. When you enable role
    only to owners of the profile or users with proper permissions).
 6. Actual role expiration occurs at cron time. Cron automatically removes
    expired roles from affected users.
+7. If you go to admin/config/people/role_expire you can set a default role when
+   each role expires.
 
 TODO: Views and rules integration.

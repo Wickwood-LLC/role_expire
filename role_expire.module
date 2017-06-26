@@ -612,3 +612,29 @@ function role_expire_process_default_role_duration_for_user($role_id, $uid) {
     }
   }
 }
+
+/**
+ * Implementation of hook_feeds_node_processor_targets_alter().
+ */
+function role_expire_feeds_processor_targets_alter(&$targets, $entity_type, $bundle_name) {
+  global $user;
+  $roles = user_roles();
+
+  foreach ($roles as $rid => $rname) {
+
+    if ($entity_type == 'user') {
+      $targets['role_expire_' .  $rid] = array(
+        'name' => t('Role expire date (' . $rname . ')'),
+        'description' => t("Expire date for role " . $rname),
+        'callback' => 'role_expire_set_target',
+      );
+    }
+  }
+}
+
+/**
+ * Callback for mapping. Here is where the actual mapping happens.
+ */
+function role_expire_set_target($source, $entity, $target, $value) {
+  $entity->$target = $value[0];
+}

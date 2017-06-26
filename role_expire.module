@@ -392,6 +392,14 @@ function role_expire_user_cancel($edit, $account, $method) {
 }
 
 /**
+ * Implements hook_user_delete().
+ */
+function role_expire_user_delete($account) {
+  // Delete user records.
+  role_expire_delete_user_records($account->uid);
+}
+
+/**
  * Implements hook_user_load().
  */
 function role_expire_user_load($users) {

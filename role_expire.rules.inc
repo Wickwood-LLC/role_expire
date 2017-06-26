@@ -6,6 +6,29 @@
  */
 
 /**
+ * Implementation of hook_rules_event_info().
+ */
+function role_expire_rules_event_info() {
+  $items = array(
+    'role_expire_rules_event_role_expires' => array(
+      'label' => 'When a role expires',
+      'group' => 'Role Expire',
+      'variables' => array(
+        'user' => array(
+          'type' => 'user',
+          'label' => t('Expired user'),
+        ),
+        'previous_role' => array(
+          'type' => 'text',
+          'label' => t('Previous role'),
+        ),
+      ),
+    ),
+  );
+  return $items;
+}
+
+/**
  * Implementation of hook_rules_action_info().
  */
 function role_expire_rules_action_info() {

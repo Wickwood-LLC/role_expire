@@ -484,6 +484,10 @@ function role_expire_cron() {
                 'Removed role @role from user @account.',
                 array('@role' => $role_name, '@account' => $account->name)
                 );
+
+        if (module_exists('rules')) {
+          rules_invoke_event('role_expire_rules_event_role_expires', $account, $role_name);
+        }
       }
       else {
 

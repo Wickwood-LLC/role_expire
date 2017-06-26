@@ -61,13 +61,13 @@ function role_expire_schema() {
  * Implementation of hook_install().
  */
 function role_expire_install() {
-  
+
 }
 
 /**
  * Implementation of hook_uninstall().
  */
 function role_expire_uninstall() {
-  
+  variable_del('role_expire_default_roles');
 }
 

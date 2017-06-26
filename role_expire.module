@@ -175,10 +175,42 @@ function role_expire_get_expired($time = '') {
   return $return;
 }
 
+/**
+ * API function; Get roles to assign on expiration (global configuration).
+ *
+ * @return array
+ *   Returns an array where the key is the original rid and the value the
+ *   one that has to be assigned on expiration. The array will be empty if
+ *   configuration is not set.
+ */
+function role_expire_get_roles_after_expiration() {
+  $values_raw = variable_get('role_expire_default_roles', '');
+  $values = empty($values_raw) ? array() : json_decode($values_raw, TRUE);
+  return $values;
+}
 
 /*******************************************************************************
  * Hook implementations
  ******************************************************************************/
+
+/**
+ * Implements hook_menu().
+ */
+function role_expire_menu() {
+  $items = array();
+
+  $items['admin/config/people/role_expire'] = array(
+    'title' => 'Role expire',
+    'description' => 'Change default role when each role expires',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('role_expire_admin_settings'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'role_expire.admin.inc',
+  );
+
+  return $items;
+}
 
 /**
  * Implements hook_views_api().
@@ -369,7 +401,7 @@ function role_expire_user_load($users) {
   /**
    * Load the starter roles into a static cache so it is easy to
    * see what has changed later on.
-   * 
+   *
    * TODO. Support multiple users that are being loaded here. Not sure yet
    * what that means for Role Expire 7.
    */
@@ -422,6 +454,15 @@ function role_expire_cron() {
 
       // If the account *does* exist, update it.
       if (!empty($account)) {
+
+        // Assign a new role after expiration if requested given configuration.
+        $new_roles = role_expire_get_roles_after_expiration();
+        if (!empty($new_roles) && isset($new_roles[$expire->rid]) && $new_roles[$expire->rid] != 0) {
+          $new_rid = $new_roles[$expire->rid];
+          $new_role = user_role_load($new_rid);
+          $account->roles[$new_rid] = $new_role->name;
+        }
+
         $edit = $account->roles;
         unset($edit[$expire->rid]);
         // In the documentation for the role_expire implementation of hook_user we

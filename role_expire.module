@@ -57,6 +57,20 @@ function role_expire_delete_record($uid, $rid) {
   ->condition('rid', $rid)
   ->execute();
 }
+
+/**
+ * API function; Delete all records for role.
+ *
+ * @param $rid
+ *   Role ID.
+ * @return
+ */
+function role_expire_delete_role_records($rid) {
+  db_delete('role_expire')
+    ->condition('rid', $rid)
+    ->execute();
+}
+
 /**
  * API function; Delete all user expirations.
  *
@@ -210,6 +224,16 @@ function role_expire_menu() {
   );
 
   return $items;
+}
+
+/**
+ * Implements hook_user_role_delete().
+ */
+function role_expire_user_role_delete($role) {
+  // Delete the duration row for that role if exists.
+  role_expire_delete_default_duration($role->rid);
+  // Delete all expire information for that role.
+  role_expire_delete_role_records($role->rid);
 }
 
 /**

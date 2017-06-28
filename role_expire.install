@@ -71,3 +71,13 @@ function role_expire_uninstall() {
   variable_del('role_expire_default_roles');
 }
 
+/**
+ * Issue #2341269: delete orphaned records from 'role_expire' and 'role_expire_length' tables.
+ */
+function role_expire_update_7100(&$sandbox) {
+  $roles = user_roles();
+  $rids = array_keys($roles);
+
+  db_query("DELETE FROM {role_expire} WHERE rid NOT IN (:rids)", array(':rids' => $rids));
+  db_query("DELETE FROM {role_expire_length} WHERE rid NOT IN (:rids)", array(':rids' => $rids));
+}

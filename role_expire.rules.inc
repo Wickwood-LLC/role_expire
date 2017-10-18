@@ -127,14 +127,14 @@ function role_expire_rules_action_set_role_expire($account, $rid, $timestamp) {
 }
 
 /**
- * Action: Set expire time for role to longest attached to this user. Defaults 
+ * Action: Set expire time for role to longest attached to this user. Defaults
  * to the current time.
  */
 function role_expire_rules_action_set_role_expire_to_longest($account, $rid, $timestamp) {
   // Set an invalid timestamp to allow for comparisons without warnings.
   $timestamp = -1;
   foreach($account->roles as $id => $name) {
-    $this_ts = role_expire_get_user_role_expiry_time($account->uid, $id);    
+    $this_ts = role_expire_get_user_role_expiry_time($account->uid, $id);
     if (!empty($this_ts)) {
       $timestamp = ($this_ts > $timestamp) ? $this_ts : $timestamp;
     }
@@ -167,4 +167,42 @@ function role_expire_rules_action_extend_role_expire($account, $rid, $extend) {
  */
 function role_expire_rules_action_remove_role_expire($account, $rid) {
   role_expire_delete_record($account->uid, $rid);
+}
+
+/**
+ * Implements hook_rules_condition_info().
+ */
+function role_expire_rules_condition_info() {
+  $conditions['role_expire_rules_condition_set_role_expire'] = array(
+    'label' => t('Match Expiring Role'),
+    'group' => t('Role Expire'),
+    'help' => t('Select the expiring role variable and matching role to that should expire for this rule to be executed.'),
+    'parameter' => array(
+      'previous_role' => array(
+        'type' => 'integer',
+        'label' => t('Expiring Role'),
+      ),
+      'role_match' => array(
+        'type' => 'integer',
+        'label' => t('Matching Role'),
+        'options list' => 'rules_user_roles_options_list',
+      ),
+    ),
+  );
+
+  return $conditions;
+}
+
+/**
+ * The callback for the condition 'role_expire_rules_condition_set_role_expire'.
+ * @param $previous_role
+ * @param $role_match
+ * @return boolean
+ */
+function role_expire_rules_condition_set_role_expire($previous_role, $role_match) {
+  if($previous_role == $role_match) {
+    return TRUE;
+  } else {
+    return FALSE;
+  }
 }

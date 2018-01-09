@@ -142,14 +142,18 @@ function role_expire_get_default_duration($rid) {
 function role_expire_set_default_duration($rid, $duration) {
 
   if (isset($duration) && is_numeric($duration) && $duration > 0) {
-    $result =  db_update('role_expire_length')
-               ->fields(array(
-                 'duration' => $duration,
-               ))
-               ->condition('rid', $rid)
-               ->execute();
 
-    if (!$result) {
+    $existing = db_query("SELECT duration FROM {role_expire_length} WHERE rid = :rid", array(':rid' => $rid))->fetchField();
+
+    if ($existing) {
+      $result = db_update('role_expire_length')
+        ->fields(array(
+          'duration' => $duration,
+        ))
+        ->condition('rid', $rid)
+        ->execute();
+    }
+    else {
       $id = db_insert('role_expire_length')
             ->fields(array(
               'rid' => $rid,

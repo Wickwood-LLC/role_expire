@@ -7,3 +7,6 @@ files[] = role_expire.views.inc
 files[] = role_expire.rules.inc
 
 configure = admin/config/people/role_expire
+
+version = "7.x-1.0-rc2"
+project = "role_expire"

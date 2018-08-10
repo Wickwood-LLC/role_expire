@@ -122,7 +122,12 @@ function role_expire_rules_action_info() {
  * Action: Add expire time to role.
  */
 function role_expire_rules_action_set_role_expire($account, $rid, $timestamp) {
-  role_expire_write_record($account->uid, $rid, $timestamp);
+  if (!empty($account->uid)) {
+    role_expire_write_record($account->uid, $rid, $timestamp);
+  }
+  else {
+    watchdog('role_expire', t('Unable to set role expiration for anonymous user.'));
+  }
 }
 
 /**

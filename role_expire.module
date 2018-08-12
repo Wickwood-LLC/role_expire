@@ -399,16 +399,40 @@ function role_expire_user_update(&$edit, $account, $category) {
  * Implements hook_user_insert().
  */
 function role_expire_user_insert(&$edit, $account, $category) {
-
   if ($category == 'account' && (user_access('administer role expire') || user_access('administer users'))) {
 
-    // This adds default expiration to any new roles that have been given to the user.
-    $new_roles = array_keys($edit['roles']);
-    // We have the new roles, loop over them and see whether we need to assign expiry to them.
-    foreach ($new_roles as $role_id) {
-      role_expire_process_default_role_duration_for_user($role_id, $account->uid);
+    // Add roles expiry information for the user role.
+    foreach (array_keys($edit) as $name) {
+      if (strpos($name, 'role_expire_') === 0) {
+        $value = $edit[$name];
+        $rid = substr($name, strlen('role_expire_'));
+        // No need to call role_expire_delete_record because it's a new user.
+        if ($value != '' && array_key_exists($rid, $edit['roles'])) {
+          $expiry_timestamp = strtotime($value);
+          role_expire_write_record($account->uid, $rid, $expiry_timestamp);
+        }
+      }
     }
-  }
+
+    if (isset($edit['roles'])) {
+
+      // Add default expiration to any new roles that have been given to the user.
+      if (isset($edit['original'])) {
+        $new_roles = array_diff(array_keys($edit['roles']), array_keys($edit['original']->roles));
+      }
+      else {
+        $new_roles = array_filter($edit['roles']);
+      }
+      if (isset($new_roles)) {
+        // We have the new roles, loop over them and see whether we need to assign expiry to them.
+        foreach (array_keys($edit['roles']) as $role_id) {
+          role_expire_process_default_role_duration_for_user($role_id, $account->uid);
+        }
+      }
+
+    } // if edit[roles]
+
+  } // if category && user_access*/
 }
 
 /**

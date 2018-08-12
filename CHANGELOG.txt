@@ -1,4 +1,4 @@
-Role expire 7.x-1.0-rc3, XXXX-XX-XX
+Role expire 7.x-1.0-rc3, 2018-08-12
 ------------------------------------
 
 #2401985: Expiration date is not set when creating a new user.

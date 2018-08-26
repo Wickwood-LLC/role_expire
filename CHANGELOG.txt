@@ -1,3 +1,8 @@
+Role expire 7.x-1.0-rc4, XXXX-XX-XX
+-----------------------------------
+
+#2406975: Remove 'module' key in hook_rules_action_info()
+
 Role expire 7.x-1.0-rc3, 2018-08-12
 ------------------------------------
 

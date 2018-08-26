@@ -53,7 +53,6 @@ function role_expire_rules_action_info() {
         'description' => t('The expiration time to be added'),
       ),
     ),
-    'module' => 'role_expire',
   );
   $items['role_expire_rules_action_set_role_expire_to_longest'] = array(
     'label' => t('Set expire time to longest for this user'),
@@ -71,7 +70,6 @@ function role_expire_rules_action_info() {
         'options list' => 'rules_user_roles_options_list',
       ),
     ),
-    'module' => 'role_expire',
   );
   $items['role_expire_rules_action_extend_role_expire'] = array(
     'label' => t('Extend expire time for role'),
@@ -94,7 +92,6 @@ function role_expire_rules_action_info() {
         'description' => t('The relative amount of time to be added.'),
       ),
     ),
-    'module' => 'role_expire',
   );
   $items['role_expire_rules_action_remove_role_expire'] = array(
     'label' => t('Remove expire time from role'),
@@ -112,7 +109,6 @@ function role_expire_rules_action_info() {
         'options list' => 'rules_user_roles_options_list',
       ),
     ),
-    'module' => 'role_expire',
   );
 
   return $items;

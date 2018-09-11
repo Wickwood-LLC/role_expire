@@ -285,14 +285,24 @@ function role_expire_permission() {
  * Implements hook_form_FORM-ID_alter().
  */
 function role_expire_form_user_register_form_alter(&$form, $form_state) {
-  $form = array_merge_recursive($form, role_expire_add_expiration_input());
+  role_expire_add_expiration_input($form);
 }
 
 /**
  * Implements hook_form_FORM-ID_alter().
  */
 function role_expire_form_user_profile_form_alter(&$form, $form_state) {
-  $form = array_merge_recursive($form, role_expire_add_expiration_input($form['#user']));
+  role_expire_add_expiration_input($form);
+}
+
+/**
+ * Implements hook_form_FORM-ID_alter().
+ *
+ * Support for Role Delegation + Contextual Admin modules.
+ * @see https://www.drupal.org/node/2700759
+ */
+function role_expire_form_context_admin_user_create_menu_render_form_alter(&$form, $form_state) {
+  role_expire_add_expiration_input($form);
 }
 
 /**
@@ -372,7 +382,6 @@ function role_expire_user_admin_role_submit($form, &$form_state) {
  */
 function role_expire_user_update(&$edit, $account, $category) {
   if ($category == 'account' && (user_access('administer role expire') || user_access('administer users'))) {
-
     // Add roles expiry information for the user role.
     foreach (array_keys($edit) as $name) {
       if (strpos($name, 'role_expire_') === 0) {
@@ -389,7 +398,6 @@ function role_expire_user_update(&$edit, $account, $category) {
     }
 
     if (isset($edit['roles'])) {
-
       // Add default expiration to any new roles that have been given to the user.
       $new_roles = array_diff(array_keys($edit['roles']), array_keys($edit['original']->roles));
       if (isset($new_roles)) {
@@ -398,7 +406,6 @@ function role_expire_user_update(&$edit, $account, $category) {
           role_expire_process_default_role_duration_for_user($role_id, $account->uid);
         }
       }
-
       // Remove expiration for roles that have been removed from the user.
       $del_roles = array_diff(array_keys($edit['original']->roles), array_keys($edit['roles']));
       if (isset($del_roles)) {
@@ -407,9 +414,7 @@ function role_expire_user_update(&$edit, $account, $category) {
           role_expire_delete_record($account->uid, $role_id);
         }
       }
-
     } // if edit[roles]
-
   } // if category && user_access
 }
 
@@ -419,7 +424,6 @@ function role_expire_user_update(&$edit, $account, $category) {
  */
 function role_expire_user_insert(&$edit, $account, $category) {
   if ($category == 'account' && (user_access('administer role expire') || user_access('administer users'))) {
-
     // Add roles expiry information for the user role.
     foreach (array_keys($edit) as $name) {
       if (strpos($name, 'role_expire_') === 0) {
@@ -433,25 +437,26 @@ function role_expire_user_insert(&$edit, $account, $category) {
       }
     }
 
-    if (isset($edit['roles'])) {
+    // Role delegation module adds a separate "roles_change" array to manage
+    // access. This is merged into the "roles" array prior to saving.
+    $roles_key = (module_exists('role_delegation') && !user_access('administer permissions')) ? 'roles_change' : 'roles';
 
+    if (isset($edit[$roles_key])) {
       // Add default expiration to any new roles that have been given to the user.
-      if (isset($edit['original'])) {
-        $new_roles = array_diff(array_keys($edit['roles']), array_keys($edit['original']->roles));
+      if ($roles_key == 'roles' && isset($edit['original'])) {
+        $new_roles = array_diff(array_keys($edit[$roles_key]), array_keys($edit['original']->roles));
       }
       else {
-        $new_roles = array_filter($edit['roles']);
+        $new_roles = array_filter($edit[$roles_key]);
       }
       if (isset($new_roles)) {
         // We have the new roles, loop over them and see whether we need to assign expiry to them.
-        foreach (array_keys($edit['roles']) as $role_id) {
+        foreach (array_keys($edit[$roles_key]) as $role_id) {
           role_expire_process_default_role_duration_for_user($role_id, $account->uid);
         }
       }
-
-    } // if edit[roles]
-
-  } // if category && user_access*/
+    } // if edit[roles] or edit[roles_change]
+  } // if category && user_access
 }
 
 /**
@@ -576,27 +581,28 @@ function role_expire_cron() {
 
 
 /**
- * Add form element that accepts the role expiration time.
+ * Add form elements to the given form that accept the role expiration times.
  *
- * @param $account
- *   The user object.
- * @return
- *   Form element.
+ * @param array $form
+ *   The user edit form to which role expire input elements will be added.
  */
-function role_expire_add_expiration_input($account = NULL) {
-  $form = array();
-  if (user_access('administer users') || user_access('administer role expire')) {
-    drupal_add_js(drupal_get_path('module', 'role_expire') . '/role_expire.js');
-    $form['roles']['#attributes'] = array('class' => array('role-expire-roles'));
+function role_expire_add_expiration_input(array &$form) {
+  // Role delegation module adds a separate "roles_change" array to manage
+  // access. This is merged into the "roles" array prior to saving.
+  $roles_key = (module_exists('role_delegation') && !user_access('administer permissions')) ? 'roles_change' : 'roles';
 
-    foreach (_role_expire_get_role() as $rid => $role) {
-      if (is_object($account) and array_key_exists('uid', $account)) {
-        $expiry_timestamp = role_expire_get_user_role_expiry_time($account->uid, $rid);
-      }
-      else {
-        $expiry_timestamp = '';
-      }
+  // Add expiration fields to each checkbox, based on permissions.
+  if ((user_access('administer users') || user_access('administer role expire')) && !empty($form['account'][$roles_key])) {
+    // Get $uid of currently viewed user.
+    $uid = (!empty($form['#user']) && is_object($form['#user']) && !empty($form['#user']->uid)) ? $form['#user']->uid : NULL;
 
+    // Attach CSS class and JavaScript file to the form field.
+    $form['account'][$roles_key]['#attributes']['class'][] = 'role-expire-roles';
+    $form['account'][$roles_key]['#attached']['js'][] = drupal_get_path('module', 'role_expire') . '/role_expire.js';
+
+    // Loop through each roles checkbox and add an expiration field.
+    foreach ($form['account'][$roles_key]['#options'] as $rid => $role) {
+      $expiry_timestamp = ($uid !== NULL) ? role_expire_get_user_role_expiry_time($uid, $rid) : '';
       $form['role_expire_' . $rid] = array(
         '#title' => t("%role role expiration date/time", array('%role' => drupal_ucfirst($role))),
         '#type' => 'textfield',
@@ -608,7 +614,6 @@ function role_expire_add_expiration_input($account = NULL) {
 
     $form['#validate'][] = '_role_expire_validate_role_expires';
   }
-  return $form;
 }
 
 /*******************************************************************************

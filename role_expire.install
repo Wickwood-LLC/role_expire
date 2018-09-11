@@ -46,10 +46,10 @@ function role_expire_schema() {
         'description' => t('The role_id.')
       ),
       'duration' => array(
-        'type' => 'int',
-        'unsigned' => TRUE,
+        'type' => 'text',
+        'size' => 'small',
         'not null' => TRUE,
-        'description' => t('The default duration for the role.')
+        'description' => t('A strtotime-compatible default duration string.')
       ),
     ),
     'primary key' => array('rid'),
@@ -80,4 +80,33 @@ function role_expire_update_7100(&$sandbox) {
 
   db_query("DELETE FROM {role_expire} WHERE rid NOT IN (:rids)", array(':rids' => $rids));
   db_query("DELETE FROM {role_expire_length} WHERE rid NOT IN (:rids)", array(':rids' => $rids));
+}
+
+/**
+ * Update schema for default role_expire_length table. Convert integer days to text "# days".
+ */
+function role_expire_update_7101() {
+  // Fetch out all the current durations.
+  $result = db_query('SELECT rid,duration FROM {role_expire_length}');
+  $durations = array();
+  while($row = $result->fetchObject()) {
+    $durations[$row->rid] = $row->duration;
+  }
+
+  // Convert the original duration column from type int to type text
+  $field = array(
+    'type' => 'text',
+    'size' => 'small',
+    'not null' => TRUE,
+    'description' => t('A strtotime-compatible default duration string.')
+  );
+  db_change_field('role_expire_length', 'duration', 'duration', $field);
+
+  // Append "days" since that's all it could've been before this revision.
+  foreach ($durations as $rid => $duration) {
+    db_update('role_expire_length')
+      ->fields(array('duration' => "$duration days"))
+      ->condition('rid',$rid)
+      ->execute();
+  }
 }

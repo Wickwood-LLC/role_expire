@@ -545,6 +545,7 @@ function role_expire_cron() {
           $new_rid = $new_roles[$expire->rid];
           $new_role = user_role_load($new_rid);
           $account->roles[$new_rid] = $new_role->name;
+          role_expire_process_default_role_duration_for_user($new_rid, $account->uid);
         }
 
         $edit = $account->roles;

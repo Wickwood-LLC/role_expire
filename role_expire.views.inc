@@ -110,7 +110,7 @@ class role_expire_handler_field_rid extends views_handler_field {
 
     // Return the role name corresponding to the role ID.
     // TODO: Should I be using this->get_value() here?
-    $rid = $values->role_expire_rid;
+    $rid = isset($values->role_expire_rid) ? $values->role_expire_rid : '';
     if ($rid) {
       $role = $this->items[$rid]['role'];
       if (!empty($role)) {

@@ -35,9 +35,35 @@ function role_expire_views_data() {
     ),
   );
 
+  // Expose all role expire information.
+  $data['role_expire']['all'] = array(
+    'title' => t('Role expiration all data'),
+    'help' => t('Shows roles that expire with their expiration date'),
+    // Information for displaying the rid
+    'field' => array(
+      'handler' => 'role_expire_handler_field_all',
+      'click sortable' => TRUE,
+    ),
+    // Information for accepting a rid as an argument
+    'argument' => array(
+      'handler' => 'views_handler_argument_users_roles_rid',
+      'name field' => 'title', // the field to display in the summary.
+      'numeric' => TRUE,
+      'validate type' => 'rid',
+    ),
+    // Information for accepting a uid as a filter
+    'filter' => array(
+      'handler' => 'views_handler_filter_user_roles',
+    ),
+    // Information for sorting on a uid.
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+
   // Expose the role expiration date
   $data['role_expire']['expiry_timestamp'] = array(
-    'title' => t('Role expiration date/time'),
+    'title' => t('Role expiration date/time (deprecated)'),
     'help' => t('Date and time the role will expire. (See also Role expiration role.)'),
     'field' => array(
       'handler' => 'views_handler_field_date',
@@ -53,7 +79,7 @@ function role_expire_views_data() {
 
   // Expose the role id from role_expire
   $data['role_expire']['rid'] = array(
-    'title' => t('Role expiration role'),
+    'title' => t('Role expiration role (deprecated)'),
     'help' => t('The Role that corresponds with the Role expiration date/time'),
     // Information for displaying the rid
     'field' => array(
@@ -80,6 +106,62 @@ function role_expire_views_data() {
   return $data;
 }
 
+/**
+ * Class role_expire_handler_field_all.
+ *
+ * Recommended class, it avoids duplicated rows.
+ *
+ * @see views_handler_field_user_roles.
+ */
+class role_expire_handler_field_all extends views_handler_field_prerender_list {
+
+  /**
+   * {@inheritdoc}
+   */
+  public function construct() {
+    parent::construct();
+    $this->additional_fields['uid'] = array('table' => 'users', 'field' => 'uid');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function query() {
+    $this->add_additional_fields();
+    $this->field_alias = $this->aliases['uid'];
+  }
+
+  function pre_render(&$values) {
+    $uids = array();
+    $this->items = array();
+
+    foreach ($values as $result) {
+      $uids[] = $this->get_value($result, NULL, TRUE);
+    }
+
+    if ($uids) {
+      $result = db_query("SELECT u.uid, e.rid, r.name, e.expiry_timestamp FROM {role} r INNER JOIN {users_roles} u ON u.rid = r.rid INNER JOIN {role_expire} e ON e.rid = r.rid WHERE u.uid IN (:uids) ORDER BY r.name",
+        array(':uids' => $uids));
+      foreach ($result as $role) {
+        $this->items[$role->uid][$role->rid]['role'] = check_plain($role->name) . ' (' . date('Y-m-d H:i:s',check_plain($role->expiry_timestamp)) . ')';
+        $this->items[$role->uid][$role->rid]['rid'] = $role->rid;
+      }
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function render_item($count, $item) {
+    return $item['role'];
+  }
+}
+
+/**
+ * Class role_expire_handler_field_rid.
+ *
+ * Deprecated handler.
+ */
 class role_expire_handler_field_rid extends views_handler_field {
 
   // Derived from views_handler_field_user_roles

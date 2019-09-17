@@ -112,6 +112,7 @@ function role_expire_views_data() {
  * Recommended class, it avoids duplicated rows.
  *
  * @see views_handler_field_user_roles.
+ * @see views_handler_field_date.
  */
 class role_expire_handler_field_all extends views_handler_field_prerender_list {
 
@@ -131,6 +132,75 @@ class role_expire_handler_field_all extends views_handler_field_prerender_list {
     $this->field_alias = $this->aliases['uid'];
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function option_definition() {
+    $options = parent::option_definition();
+
+    $options['date_format'] = array('default' => 'small');
+    $options['custom_date_format'] = array('default' => '');
+    $options['timezone'] = array('default' => '');
+
+    return $options;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function options_form(&$form, &$form_state) {
+    $date_formats = array();
+    $date_types = system_get_date_types();
+    foreach ($date_types as $key => $value) {
+      $date_formats[$value['type']] = t('@date_format format', array('@date_format' => $value['title'])) . ': ' . format_date(REQUEST_TIME, $value['type']);
+    }
+
+    $form['date_format'] = array(
+      '#type' => 'select',
+      '#title' => t('Date format'),
+      '#options' => $date_formats + array(
+          'custom' => t('Custom'),
+        ),
+      '#default_value' => isset($this->options['date_format']) ? $this->options['date_format'] : 'small',
+    );
+    $form['custom_date_format'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Custom date format'),
+      '#description' => t('If "Custom", see the <a href="@url" target="_blank">PHP manual</a> for date formats. Otherwise, enter the number of different time units to display, which defaults to 2.', array('@url' => 'http://php.net/manual/function.date.php')),
+      '#default_value' => isset($this->options['custom_date_format']) ? $this->options['custom_date_format'] : '',
+      '#dependency' => array(
+        'edit-options-date-format' => $this->supported_date_types(),
+      ),
+    );
+
+    $form['timezone'] = array(
+      '#type' => 'select',
+      '#title' => t('Timezone'),
+      '#description' => t('Timezone to be used for date output.'),
+      '#options' => array(
+          '' => t('- Default site/user timezone -'),
+        ) + system_time_zones(FALSE),
+      '#default_value' => $this->options['timezone'],
+      '#dependency' => array(
+        'edit-options-date-format' => array_merge(array('custom'), array_keys($date_formats)),
+      ),
+    );
+
+    parent::options_form($form, $form_state);
+  }
+
+  /**
+   * Provide a list of all of the supported standard date types.
+   *
+   * @return array
+   *   The list of supported formats.
+   */
+  private function supported_date_types() {
+    return array(
+      'custom',
+    );
+  }
+
   function pre_render(&$values) {
     $uids = array();
     $this->items = array();
@@ -139,11 +209,23 @@ class role_expire_handler_field_all extends views_handler_field_prerender_list {
       $uids[] = $this->get_value($result, NULL, TRUE);
     }
 
+    $format = $this->options['date_format'];
+    if (in_array($format, $this->supported_date_types())) {
+      $custom_format = $this->options['custom_date_format'];
+    }
+    else {
+      $custom_format = '';
+    }
+
     if ($uids) {
       $result = db_query("SELECT u.uid, e.rid, r.name, e.expiry_timestamp FROM {role} r INNER JOIN {users_roles} u ON u.rid = r.rid INNER JOIN {role_expire} e ON e.rid = r.rid WHERE u.uid IN (:uids) ORDER BY r.name",
         array(':uids' => $uids));
       foreach ($result as $role) {
-        $this->items[$role->uid][$role->rid]['role'] = check_plain($role->name) . ' (' . date('Y-m-d H:i:s',check_plain($role->expiry_timestamp)) . ')';
+
+        $timezone = !empty($this->options['timezone']) ? $this->options['timezone'] : NULL;
+        $expirationDate = format_date(check_plain($role->expiry_timestamp), $format, $custom_format, $timezone);
+
+        $this->items[$role->uid][$role->rid]['role'] = check_plain($role->name) . ' (' . $expirationDate . ')';
         $this->items[$role->uid][$role->rid]['rid'] = $role->rid;
       }
     }

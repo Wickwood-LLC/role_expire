@@ -2,7 +2,8 @@ Role expire 7.x-1.2, XXXX-XX-XX
 -------------------------------
 #3061945: Fix PHP Notice on views using Role expire fields
 #3021274: End sessions when expiring roles
-Added new Views field that avoids duplicated rows ("Role expiration all data")
+Added new Views field that avoids duplicated rows and displays all Role Expire data ("Role expiration all data")
+Old Views fields marked as deprecated
 
 Role expire 7.x-1.1, 2019-02-07
 -------------------------------

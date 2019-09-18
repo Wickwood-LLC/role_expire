@@ -7,6 +7,7 @@
  * Views module integration with the role expire module. Exposes the following
  * to Views:
  *  Fields:
+ *    "Role expiration all data" - all Role expire data
  *    "Role expiration date/time" - the date/time that a role expires
  *    "Role expiration role" - the role that expires at the given Role expiration date/time
  *  Filters:
@@ -43,21 +44,6 @@ function role_expire_views_data() {
     'field' => array(
       'handler' => 'role_expire_handler_field_all',
       'click sortable' => TRUE,
-    ),
-    // Information for accepting a rid as an argument
-    'argument' => array(
-      'handler' => 'views_handler_argument_users_roles_rid',
-      'name field' => 'title', // the field to display in the summary.
-      'numeric' => TRUE,
-      'validate type' => 'rid',
-    ),
-    // Information for accepting a uid as a filter
-    'filter' => array(
-      'handler' => 'views_handler_filter_user_roles',
-    ),
-    // Information for sorting on a uid.
-    'sort' => array(
-      'handler' => 'views_handler_sort',
     ),
   );
 

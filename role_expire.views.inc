@@ -255,7 +255,7 @@ class role_expire_handler_field_expiry_timestamp extends role_expire_handler_fie
         $timezone = !empty($this->options['timezone']) ? $this->options['timezone'] : NULL;
         $expirationDate = format_date(check_plain($role->expiry_timestamp), $format, $custom_format, $timezone);
 
-        $this->items[$role->uid][$role->rid]['role'] = check_plain($role->name) . ' (' . $expirationDate . ')';
+        $this->items[$role->uid][$role->rid]['role'] = $expirationDate;
         $this->items[$role->uid][$role->rid]['rid'] = $role->rid;
       }
     }

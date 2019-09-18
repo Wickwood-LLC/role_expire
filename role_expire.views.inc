@@ -95,8 +95,6 @@ function role_expire_views_data() {
 /**
  * Class role_expire_handler_field_all.
  *
- * Recommended class, it avoids duplicated rows.
- *
  * @see views_handler_field_user_roles.
  * @see views_handler_field_date.
  */
@@ -228,44 +226,47 @@ class role_expire_handler_field_all extends views_handler_field_prerender_list {
 /**
  * Class role_expire_handler_field_rid.
  *
- * Deprecated handler.
+ * @see views_handler_field_user_roles.
  */
-class role_expire_handler_field_rid extends views_handler_field {
+class role_expire_handler_field_rid extends views_handler_field_prerender_list {
+  /**
+   * {@inheritdoc}
+   */
+  public function construct() {
+    parent::construct();
+    $this->additional_fields['uid'] = array('table' => 'users', 'field' => 'uid');
+  }
 
-  // Derived from views_handler_field_user_roles
-  // Purpose: get the *names* that correspond to the role_expire_rids.
+  /**
+   * {@inheritdoc}
+   */
+  public function query() {
+    $this->add_additional_fields();
+    $this->field_alias = $this->aliases['uid'];
+  }
+
   function pre_render(&$values) {
-    $roles = array();
+    $uids = array();
     $this->items = array();
 
-    // Get all the unique role ids into the keys of $roles. Initializing into
-    // array_keys helps prevent us from having a list where the same rid appears
-    // over and over and over.
     foreach ($values as $result) {
-      $roles[$this->get_value($result, NULL, TRUE)] = FALSE;
+      $uids[] = $this->get_value($result, NULL, TRUE);
     }
 
-    if ($roles) {
-      $result = db_query("SELECT r.rid, r.name FROM {role} r WHERE r.rid IN (:rids) ORDER BY r.name",
-        array(':rids' => array_keys($roles)));
+    if ($uids) {
+      $result = db_query("SELECT u.uid, e.rid, r.name FROM {role} r INNER JOIN {users_roles} u ON u.rid = r.rid INNER JOIN {role_expire} e ON e.rid = r.rid WHERE u.uid IN (:uids) ORDER BY r.name",
+        array(':uids' => $uids));
       foreach ($result as $role) {
-        $this->items[$role->rid]['role'] = check_plain($role->name);
-        $this->items[$role->rid]['rid'] = $role->rid;
+        $this->items[$role->uid][$role->rid]['role'] = check_plain($role->name);
+        $this->items[$role->uid][$role->rid]['rid'] = $role->rid;
       }
     }
   }
 
-  // Render the rid as the role name.
-  function render($values) {
-
-    // Return the role name corresponding to the role ID.
-    // TODO: Should I be using this->get_value() here?
-    $rid = isset($values->role_expire_rid) ? $values->role_expire_rid : '';
-    if ($rid) {
-      $role = $this->items[$rid]['role'];
-      if (!empty($role)) {
-        return $role;
-      }
-    }
+  /**
+   * {@inheritdoc}
+   */
+  public function render_item($count, $item) {
+    return $item['role'];
   }
 }

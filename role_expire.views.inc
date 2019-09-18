@@ -63,7 +63,7 @@ function role_expire_views_data() {
 
   // Expose the role expiration date
   $data['role_expire']['expiry_timestamp'] = array(
-    'title' => t('Role expiration date/time (deprecated)'),
+    'title' => t('Role expiration date/time'),
     'help' => t('Date and time the role will expire. (See also Role expiration role.)'),
     'field' => array(
       'handler' => 'views_handler_field_date',
@@ -79,7 +79,7 @@ function role_expire_views_data() {
 
   // Expose the role id from role_expire
   $data['role_expire']['rid'] = array(
-    'title' => t('Role expiration role (deprecated)'),
+    'title' => t('Role expiration role'),
     'help' => t('The Role that corresponds with the Role expiration date/time'),
     // Information for displaying the rid
     'field' => array(

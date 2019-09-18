@@ -1,1 +1,0 @@
--Views fields "Role expiration date/time" and "Role expiration role" replicate user rows if role expiration dates are not equall for all roles

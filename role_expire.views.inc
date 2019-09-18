@@ -52,7 +52,7 @@ function role_expire_views_data() {
     'title' => t('Role expiration date/time'),
     'help' => t('Date and time the role will expire. (See also Role expiration role.)'),
     'field' => array(
-      'handler' => 'views_handler_field_date',
+      'handler' => 'role_expire_handler_field_expiry_timestamp',
       'click sortable' => TRUE,
     ),
     'sort' => array(
@@ -94,6 +94,8 @@ function role_expire_views_data() {
 
 /**
  * Class role_expire_handler_field_all.
+ *
+ * This class is extended by role_expire_handler_field_expiry_timestamp.
  *
  * @see views_handler_field_user_roles.
  * @see views_handler_field_date.
@@ -179,7 +181,7 @@ class role_expire_handler_field_all extends views_handler_field_prerender_list {
    * @return array
    *   The list of supported formats.
    */
-  private function supported_date_types() {
+  protected function supported_date_types() {
     return array(
       'custom',
     );
@@ -193,16 +195,17 @@ class role_expire_handler_field_all extends views_handler_field_prerender_list {
       $uids[] = $this->get_value($result, NULL, TRUE);
     }
 
-    $format = $this->options['date_format'];
-    if (in_array($format, $this->supported_date_types())) {
-      $custom_format = $this->options['custom_date_format'];
-    }
-    else {
-      $custom_format = '';
-    }
-
     if ($uids) {
-      $result = db_query("SELECT u.uid, e.rid, r.name, e.expiry_timestamp FROM {role} r INNER JOIN {users_roles} u ON u.rid = r.rid INNER JOIN {role_expire} e ON e.rid = r.rid WHERE u.uid IN (:uids) ORDER BY r.name",
+
+      $format = $this->options['date_format'];
+      if (in_array($format, $this->supported_date_types())) {
+        $custom_format = $this->options['custom_date_format'];
+      }
+      else {
+        $custom_format = '';
+      }
+
+      $result = db_query("SELECT e.uid, e.rid, e.expiry_timestamp, r.name FROM {role_expire} e INNER JOIN {role} r ON r.rid = e.rid WHERE e.uid IN (:uids) ORDER BY r.name",
         array(':uids' => $uids));
       foreach ($result as $role) {
 
@@ -220,6 +223,42 @@ class role_expire_handler_field_all extends views_handler_field_prerender_list {
    */
   public function render_item($count, $item) {
     return $item['role'];
+  }
+}
+
+/**
+ * Class role_expire_handler_field_expiry_timestamp.
+ */
+class role_expire_handler_field_expiry_timestamp extends role_expire_handler_field_all {
+  function pre_render(&$values) {
+    $uids = array();
+    $this->items = array();
+
+    foreach ($values as $result) {
+      $uids[] = $this->get_value($result, NULL, TRUE);
+    }
+
+    if ($uids) {
+
+      $format = $this->options['date_format'];
+      if (in_array($format, $this->supported_date_types())) {
+        $custom_format = $this->options['custom_date_format'];
+      }
+      else {
+        $custom_format = '';
+      }
+
+      $result = db_query("SELECT e.uid, e.rid, e.expiry_timestamp, r.name FROM {role_expire} e INNER JOIN {role} r ON r.rid = e.rid WHERE e.uid IN (:uids) ORDER BY r.name",
+        array(':uids' => $uids));
+      foreach ($result as $role) {
+
+        $timezone = !empty($this->options['timezone']) ? $this->options['timezone'] : NULL;
+        $expirationDate = format_date(check_plain($role->expiry_timestamp), $format, $custom_format, $timezone);
+
+        $this->items[$role->uid][$role->rid]['role'] = check_plain($role->name) . ' (' . $expirationDate . ')';
+        $this->items[$role->uid][$role->rid]['rid'] = $role->rid;
+      }
+    }
   }
 }
 
@@ -254,7 +293,7 @@ class role_expire_handler_field_rid extends views_handler_field_prerender_list {
     }
 
     if ($uids) {
-      $result = db_query("SELECT u.uid, e.rid, r.name FROM {role} r INNER JOIN {users_roles} u ON u.rid = r.rid INNER JOIN {role_expire} e ON e.rid = r.rid WHERE u.uid IN (:uids) ORDER BY r.name",
+      $result = db_query("SELECT e.uid, e.rid, e.expiry_timestamp, r.name FROM {role_expire} e INNER JOIN {role} r ON r.rid = e.rid WHERE e.uid IN (:uids) ORDER BY r.name",
         array(':uids' => $uids));
       foreach ($result as $role) {
         $this->items[$role->uid][$role->rid]['role'] = check_plain($role->name);

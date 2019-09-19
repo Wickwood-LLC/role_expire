@@ -2,6 +2,7 @@ Role expire 7.x-1.2, XXXX-XX-XX
 -------------------------------
 #3061945: Fix PHP Notice on views using Role expire fields
 #3021274: End sessions when expiring roles
+#3080861: Exclude authenticated and anonymous role while assigning new role after expiration
 Added new Views field "Role expiration all data" which displays all expiration data
 Fixed views fields "Role expiration date/time" and "Role expiration role" to avoid row duplicates
 
